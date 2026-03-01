@@ -1,5 +1,4 @@
 #include "KY_015.h"
-#include "stm32wbxx_hal.h"
 
 void Wait_us(uint16_t us) {
   uint16_t start = LPTIM1->CNT;

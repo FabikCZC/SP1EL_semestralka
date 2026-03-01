@@ -1,5 +1,4 @@
 #include "main.h"
-#include "stm32wb55xx.h"
 #include <stdint.h>
 #include <stdio.h>
 
