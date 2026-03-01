@@ -23,13 +23,16 @@ void KY_015_Init(void)
     HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 1);   // Zapnutí fyzického napájení senzoru (VDD)
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 1); // Datový pin držíme v klidovém stavu HIGH
     HAL_Delay(1000); // Senzor potřebuje po zapnutí napájení cca 1 vteřinu na stabilizaci
-    printf("KY_015 inicialized\n");
 }
 
 /**
  * @brief Odpojení napájení senzoru (užitečné pro bateriové aplikace před uspáním).
  */
-void KY_015_DeInit(void) { HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 0); }
+void KY_015_DeInit(void)
+{
+    HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 0);
+    HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 0);
+}
 
 /**
  * @brief Vyslání "Start" signálu ze strany mikrokontroléru.
@@ -38,7 +41,6 @@ void KY_015_DeInit(void) { HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pi
  */
 void KY_015_RequestData(void)
 {
-    printf("KY_015 want data\n");
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 0); // Stáhnout linku dolů (LOW)
     Wait_us(18000);                                               // Zadržet v LOW na 18 ms (Startovací pulz)
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin,
@@ -200,6 +202,7 @@ void KY_015_GetData(void)
  */
 void enter_STOP2_mode(void)
 {
+    KY_015_DeInit();   // Odpojení napájení senzoru, aby nespotřebovával energii během spánku
     HAL_SuspendTick(); // Vypne hlavní časovač (SysTick), jinak by nás probudil za 1 milisekundu
 
     // Samotný příkaz k uspání. Jádro se zde zastaví a čeká na přerušení (např. od LPTIM1).
@@ -209,4 +212,5 @@ void enter_STOP2_mode(void)
 
     SystemClock_Config(); // Ve STOP2 se vypínají hlavní hodiny (PLL), musíme je znovu nahodit
     HAL_ResumeTick();     // Znovu zapne SysTick, aby fungovaly funkce jako HAL_Delay()
+    KY_015_Init();        // Znovu inicializujeme senzor, protože jsme odpojili jeho napájení
 }
