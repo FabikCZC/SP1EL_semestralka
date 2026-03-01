@@ -4,6 +4,7 @@
 
 // extern TIM_HandleTypeDef htim16;
 extern I2C_HandleTypeDef hi2c3;
+extern _Bool DHT11_read;
 
 // uint32_t LPTIM1_period = 30000; // 30ms period for LPTIM1
 

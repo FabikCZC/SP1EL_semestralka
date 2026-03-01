@@ -1,10 +1,11 @@
 #include "KY_015.h"
 #include "lcd128_32.h"
+#include "stm32wb55xx.h"
 
 void Wait_us(uint16_t us) {
-  uint16_t start = LPTIM1->CNT;
+  uint16_t start = LPTIM2->CNT;
   // uint16_t duration = us;
-  while ((uint16_t)(LPTIM1->CNT - start) < us)
+  while ((uint16_t)(LPTIM2->CNT - start) < us)
     ;
 }
 
@@ -72,8 +73,8 @@ void KY_015_ReadData(uint8_t *data) {
           return;
       }
 
-      // b) Měříme délku HIGH pulzu pomocí LPTIM1
-      start_tick = LPTIM1->CNT;
+      // b) Měříme délku HIGH pulzu pomocí LPTIM2
+      start_tick = LPTIM2->CNT;
 
       // Čekáme, dokud neskončí HIGH
       timeout = 10000;
@@ -83,7 +84,7 @@ void KY_015_ReadData(uint8_t *data) {
       }
 
       // Spočítáme délku pulzu
-      pulse_length = (uint16_t)(LPTIM1->CNT - start_tick);
+      pulse_length = (uint16_t)(LPTIM2->CNT - start_tick);
 
       // c) Rozhodnutí:
       // 1 tick timeru při 1MHz = 1 us.

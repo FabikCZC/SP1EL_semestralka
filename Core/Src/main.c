@@ -47,6 +47,7 @@ COM_InitTypeDef BspCOMInit;
 I2C_HandleTypeDef hi2c3;
 
 LPTIM_HandleTypeDef hlptim1;
+LPTIM_HandleTypeDef hlptim2;
 
 /* USER CODE BEGIN PV */
 
@@ -58,6 +59,7 @@ void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_LPTIM1_Init(void);
 static void MX_I2C3_Init(void);
+static void MX_LPTIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -101,8 +103,9 @@ int main(void) {
   MX_GPIO_Init();
   MX_LPTIM1_Init();
   MX_I2C3_Init();
+  MX_LPTIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_LPTIM_Counter_Start(&hlptim1, 0xFFFF);
+  HAL_LPTIM_Counter_Start(&hlptim2, 0xFFFF);
   LCD_Init(&hi2c3);
   LCD_Clear(&hi2c3);
   /* USER CODE END 2 */
@@ -159,12 +162,13 @@ void SystemClock_Config(void) {
    * in the RCC_OscInitTypeDef structure.
    */
   RCC_OscInitStruct.OscillatorType =
-      RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_MSI;
+      RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI1 | RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_10;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     Error_Handler();
@@ -280,6 +284,37 @@ static void MX_LPTIM1_Init(void) {
   /* USER CODE BEGIN LPTIM1_Init 2 */
 
   /* USER CODE END LPTIM1_Init 2 */
+}
+
+/**
+ * @brief LPTIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_LPTIM2_Init(void) {
+
+  /* USER CODE BEGIN LPTIM2_Init 0 */
+
+  /* USER CODE END LPTIM2_Init 0 */
+
+  /* USER CODE BEGIN LPTIM2_Init 1 */
+
+  /* USER CODE END LPTIM2_Init 1 */
+  hlptim2.Instance = LPTIM2;
+  hlptim2.Init.Clock.Source = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
+  hlptim2.Init.Clock.Prescaler = LPTIM_PRESCALER_DIV32;
+  hlptim2.Init.Trigger.Source = LPTIM_TRIGSOURCE_SOFTWARE;
+  hlptim2.Init.OutputPolarity = LPTIM_OUTPUTPOLARITY_HIGH;
+  hlptim2.Init.UpdateMode = LPTIM_UPDATE_IMMEDIATE;
+  hlptim2.Init.CounterSource = LPTIM_COUNTERSOURCE_INTERNAL;
+  hlptim2.Init.Input1Source = LPTIM_INPUT1SOURCE_GPIO;
+  hlptim2.Init.Input2Source = LPTIM_INPUT2SOURCE_GPIO;
+  if (HAL_LPTIM_Init(&hlptim2) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN LPTIM2_Init 2 */
+
+  /* USER CODE END LPTIM2_Init 2 */
 }
 
 /**

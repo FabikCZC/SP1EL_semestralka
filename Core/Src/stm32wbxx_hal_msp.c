@@ -169,7 +169,7 @@ void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef* hlptim)
   /** Initializes the peripherals clock
   */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM1;
-    PeriphClkInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_PCLK1;
+    PeriphClkInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSI;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
@@ -183,7 +183,27 @@ void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef* hlptim)
     /* USER CODE BEGIN LPTIM1_MspInit 1 */
 
     /* USER CODE END LPTIM1_MspInit 1 */
+  }
+  else if(hlptim->Instance==LPTIM2)
+  {
+    /* USER CODE BEGIN LPTIM2_MspInit 0 */
 
+    /* USER CODE END LPTIM2_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM2;
+    PeriphClkInitStruct.Lptim2ClockSelection = RCC_LPTIM2CLKSOURCE_PCLK;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* Peripheral clock enable */
+    __HAL_RCC_LPTIM2_CLK_ENABLE();
+    /* USER CODE BEGIN LPTIM2_MspInit 1 */
+
+    /* USER CODE END LPTIM2_MspInit 1 */
   }
 
 }
@@ -209,6 +229,17 @@ void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef* hlptim)
     /* USER CODE BEGIN LPTIM1_MspDeInit 1 */
 
     /* USER CODE END LPTIM1_MspDeInit 1 */
+  }
+  else if(hlptim->Instance==LPTIM2)
+  {
+    /* USER CODE BEGIN LPTIM2_MspDeInit 0 */
+
+    /* USER CODE END LPTIM2_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_LPTIM2_CLK_DISABLE();
+    /* USER CODE BEGIN LPTIM2_MspDeInit 1 */
+
+    /* USER CODE END LPTIM2_MspDeInit 1 */
   }
 
 }
