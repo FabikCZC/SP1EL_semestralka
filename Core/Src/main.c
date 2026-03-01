@@ -85,8 +85,7 @@ int main(void)
 
     /* MCU Configuration--------------------------------------------------------*/
 
-    /* Reset of all peripherals, Initializes the Flash interface and the Systick.
-     */
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
 
     /* USER CODE BEGIN Init */
@@ -116,18 +115,9 @@ int main(void)
     /* USER CODE END 2 */
 
     /* Initialize leds */
-    BSP_LED_Init(LED_BLUE);
-    BSP_LED_Init(LED_GREEN);
-    BSP_LED_Init(LED_RED);
+    BSP_LED_Init(LED_GREEN); // Iniciace LED pro indikaci
 
-    /* Initialize USER push-button, will be used to trigger an interrupt each time
-     * it's pressed.*/
-    BSP_PB_Init(BUTTON_SW1, BUTTON_MODE_EXTI);
-    BSP_PB_Init(BUTTON_SW2, BUTTON_MODE_EXTI);
-    BSP_PB_Init(BUTTON_SW3, BUTTON_MODE_EXTI);
-
-    /* Initialize COM1 port (115200, 8 bits (7-bit data + 1 stop bit), no parity
-     */
+    /* Initialize COM1 port (115200, 8 bits (7-bit data + 1 stop bit), no parity */
     BspCOMInit.BaudRate = 115200;
     BspCOMInit.WordLength = COM_WORDLENGTH_8B;
     BspCOMInit.StopBits = COM_STOPBITS_1;
@@ -387,7 +377,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
+void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim) // Obsluha přerušení pro LPTIM1
 {
     if (hlptim->Instance == LPTIM1)
     {

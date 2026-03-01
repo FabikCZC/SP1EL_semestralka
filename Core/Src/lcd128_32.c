@@ -4,10 +4,16 @@
 #include <stdio.h>
 #include <string.h>
 
-// Globální proměnné pro pozici kurzoru
+/** * Globální pole pro uchování aktuální pozice kurzoru.
+ * lcd_cursor[0] = Řádek (y), rozsah 0 až 3.
+ * lcd_cursor[1] = Sloupec (x), rozsah 0 až 17.
+ */
 static uint8_t lcd_cursor[2] = {0, 0};
 
-// Písmo (přesunuto z hlavičky, aby nedělalo chyby při vícenásobném includování)
+/**
+ * @brief Bitová mapa fontu 7x8 (šířka 7 pixelů, výška 8 pixelů).
+ * Každý znak je definován jako 7 sloupců (bajtů). Jednička v bajtu rozsvítí pixel.
+ */
 static const uint8_t font_7x8[95][7] = {
     {0x00, 0x3E, 0x51, 0x49, 0x45, 0x3E, 0x00}, // 0= '0'
     {0x00, 0x00, 0x42, 0x7F, 0x40, 0x00, 0x00}, // 1= '1'
@@ -106,86 +112,136 @@ static const uint8_t font_7x8[95][7] = {
     {0x00, 0x00, 0x41, 0x41, 0x7F, 0x7F, 0x00}  // 94= ']'
 };
 
-// Interní pomocné funkce pro zápis přes I2C HAL
+/**
+ * @brief Odeslání konfiguračního příkazu do displeje.
+ * @note Využívá HAL_I2C_Mem_Write. Parametr MemAddress = 0x00 říká řadiči displeje:
+ * "Pozor, tento bajt je řídící příkaz (např. nastav kurzor, zapni displej), nekresli ho."
+ */
 static void WriteByte_command(I2C_HandleTypeDef *hi2c, uint8_t cmd)
 {
     // MemAddress 0x00 = Co=0, A0=0 (příkaz)
     HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, &cmd, 1, HAL_MAX_DELAY);
 }
 
+/**
+ * @brief Odeslání grafických dat do displeje.
+ * @note MemAddress = 0x40 říká řadiči: "Tento bajt jsou data k vykreslení (pixely)."
+ * Displej je rovnou zapíše do své RAM paměti a automaticky posune interní kurzor doprava.
+ */
 static void WriteByte_dat(I2C_HandleTypeDef *hi2c, uint8_t dat)
 {
     // MemAddress 0x40 = Co=0, A0=1 (data)
     HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x40, I2C_MEMADD_SIZE_8BIT, &dat, 1, HAL_MAX_DELAY);
 }
 
+/**
+ * @brief Vykreslí jeden znak z naší tabulky fontů.
+ * @param num Index znaku v poli font_7x8 (odpovídá zhruba ASCII kódu minus nějaký offset).
+ */
 static void WriteFont(I2C_HandleTypeDef *hi2c, int num)
 {
     for (int i = 0; i < 7; i++)
     {
-        WriteByte_dat(hi2c, font_7x8[num][i]);
+        WriteByte_dat(hi2c, font_7x8[num][i]); // Pošle 7 vertikálních sloupců tvořících znak
     }
 }
 
+// ==========================================================
 // Veřejné API funkce
+// ==========================================================
 
+/**
+ * @brief Vymaže celý displej.
+ * @note Paměť displeje je rozdělena na 4 horizontální pruhy ("Pages" / stránky).
+ * Každá stránka je vysoká 8 pixelů a široká 128 pixelů (sloupců).
+ */
 void LCD_Clear(I2C_HandleTypeDef *hi2c)
 {
-    for (int x = 0; x < 4; x++)
+    for (int x = 0; x < 4; x++) // Projdi všechny 4 řádky (stránky 0 až 3)
     {
-        WriteByte_command(hi2c, 0xb0 + x); // y page
-        WriteByte_command(hi2c, 0x10);     // x col hi
-        WriteByte_command(hi2c, 0x00);     // x col lo
-        for (int i = 0; i < 128; i++)
+        WriteByte_command(hi2c, 0xb0 + x); // Nastav adresu stránky (0xB0, 0xB1, 0xB2, 0xB3)
+        WriteByte_command(hi2c, 0x10);     // Nastav horní část adresy sloupce na 0
+        WriteByte_command(hi2c, 0x00);     // Nastav dolní část adresy sloupce na 0
+
+        for (int i = 0; i < 128; i++) // Vymaž všech 128 sloupců v daném řádku zapsáním nul
         {
             WriteByte_dat(hi2c, 0x00);
         }
     }
 }
 
+/**
+ * @brief Inicializační sekvence pro řadič displeje (typicky ST7565/ST7567).
+ */
 void LCD_Init(I2C_HandleTypeDef *hi2c)
 {
+    // 1. Hardwarové zapnutí napájení displeje
     HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_SET);
     HAL_Delay(10);
+
+    // 2. Softwarový reset řadiče
     WriteByte_command(hi2c, 0xe2);
     HAL_Delay(10);
-    WriteByte_command(hi2c, 0xa3);
-    WriteByte_command(hi2c, 0xa0);
-    WriteByte_command(hi2c, 0xc8);
-    WriteByte_command(hi2c, 0x22);
-    WriteByte_command(hi2c, 0x81);
-    WriteByte_command(hi2c, 0x30);
-    WriteByte_command(hi2c, 0x2c);
-    WriteByte_command(hi2c, 0x2e);
-    WriteByte_command(hi2c, 0x2f);
-    LCD_Clear(hi2c);
-    WriteByte_command(hi2c, 0xff);
+
+    // 3. Konfigurace hardwarových parametrů skla
+    WriteByte_command(hi2c, 0xa3); // Nastavení Biasu (poměr napětí)
+    WriteByte_command(hi2c, 0xa0); // Směr skenování segmentů (zrcadlení X)
+    WriteByte_command(hi2c, 0xc8); // Směr skenování COM vývodů (zrcadlení Y)
+    WriteByte_command(hi2c, 0x22); // Nastavení interního regulátoru napětí
+    WriteByte_command(hi2c, 0x81); // Začátek příkazu pro nastavení kontrastu
+    WriteByte_command(hi2c, 0x30); // Samotná hodnota kontrastu
+
+    // 4. Zapnutí napěťových pump
+    WriteByte_command(hi2c, 0x2c); // Booster obvod
+    WriteByte_command(hi2c, 0x2e); // Regulátor napětí
+    WriteByte_command(hi2c, 0x2f); // Sledovač napětí
+
+    LCD_Clear(hi2c); // Vymazat případný rozsypaný čaj z RAM
+
+    // 5. Pokročilé nastavení a zapnutí
+    WriteByte_command(hi2c, 0xff); // Vstup do rozšířené sady příkazů
     WriteByte_command(hi2c, 0x72);
-    WriteByte_command(hi2c, 0xfe);
+    WriteByte_command(hi2c, 0xfe); // Návrat do standardní sady
     WriteByte_command(hi2c, 0xd6);
     WriteByte_command(hi2c, 0x90);
     WriteByte_command(hi2c, 0x9d);
-    WriteByte_command(hi2c, 0xaf);
-    WriteByte_command(hi2c, 0x40);
+    WriteByte_command(hi2c, 0xaf); // Hlavní příkaz: ZAPNOUT DISPLEJ (Display ON)
+    WriteByte_command(hi2c, 0x40); // Nastavení startovní řádky RAM na 0
 }
 
+/**
+ * @brief Uložení virtuální pozice kurzoru pro funkci LCD_Display.
+ * @param y Řádek (0 až 3). Na displeji o výšce 32 pixelů se vejdou 4 řádky textu.
+ * @param x Sloupec textu (0 až 17). Znak má na šířku 7 pixelů. 128 / 7 = 18 celých znaků.
+ */
 void LCD_Cursor(uint8_t y, uint8_t x)
 {
+    // Bezpečnostní oříznutí, aby kód nezapisoval mimo paměť displeje
     if (x > 17)
         x = 17;
     if (y > 3)
         y = 3;
+
     lcd_cursor[0] = y;
     lcd_cursor[1] = x;
 }
 
+/**
+ * @brief Vykreslí textový řetězec na displej na aktuální pozici kurzoru.
+ */
 void LCD_Display(I2C_HandleTypeDef *hi2c, const char *str)
 {
     int len = strlen(str);
-    WriteByte_command(hi2c, 0xb0 + lcd_cursor[0]);
-    WriteByte_command(hi2c, 0x10 + (lcd_cursor[1] * 7 / 16));
-    WriteByte_command(hi2c, 0x00 + (lcd_cursor[1] * 7 % 16));
 
+    // 1. Nastavení kurzoru přímo v hardwaru displeje
+    WriteByte_command(hi2c, 0xb0 + lcd_cursor[0]); // Určení stránky/řádku (0xB0 až 0xB3)
+
+    // Výpočet pixelového sloupce (virtuální znaková pozice X vynásobená 7 pixely)
+    // Protože adresa sloupce se posílá nadvakrát (horní a dolní 4 bity), musíme to rozdělit
+    WriteByte_command(hi2c, 0x10 + (lcd_cursor[1] * 7 / 16)); // Horní polovina adresy sloupce
+    WriteByte_command(hi2c, 0x00 + (lcd_cursor[1] * 7 % 16)); // Dolní polovina adresy sloupce
+
+    // 2. Samotné vykreslování znaků
     for (int num = 0; num < len; num++)
     {
         switch (str[num])
@@ -481,9 +537,13 @@ void LCD_Display(I2C_HandleTypeDef *hi2c, const char *str)
     }
 }
 
+/**
+ * @brief Pomocná funkce pro vypsání celého čísla na displej.
+ * @note Využívá knihovní funkci snprintf k převodu intu na text a poté volá LCD_Display.
+ */
 void LCD_DisplayNum(I2C_HandleTypeDef *hi2c, int num)
 {
-    char str[18];
+    char str[18]; // Textový buffer (18 znaků je maximum, co se vejde na jeden řádek displeje)
     snprintf(str, sizeof(str), "%d", num);
     LCD_Display(hi2c, str);
 }

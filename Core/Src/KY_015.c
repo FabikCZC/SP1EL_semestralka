@@ -3,60 +3,73 @@
 #include "stm32wb55xx.h"
 #include "stm32wbxx_nucleo.h"
 
+/**
+ * @brief Blokující čekání v mikrosekundách pomocí časovače LPTIM2.
+ * @note  Využívá rozdíl hodnot čítače. Díky přetypování na (uint16_t)
+ * správně zvládne i situaci, kdy čítač přeteče (přejde z 65535 na 0).
+ */
 void Wait_us(uint16_t us)
 {
     uint16_t start = LPTIM2->CNT;
-    // uint16_t duration = us;
     while ((uint16_t)(LPTIM2->CNT - start) < us)
         ;
 }
 
+/**
+ * @brief Inicializace senzoru (zapnutí napájení a nastavení pinu do výchozího stavu).
+ */
 void KY_015_Init(void)
 {
-    HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin,
-                      1); // Power on the sensor
-    HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin,
-                      1); // Set DATA pin high
-    HAL_Delay(1000);      // Wait for sensor to stabilize
+    HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 1);   // Zapnutí fyzického napájení senzoru (VDD)
+    HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 1); // Datový pin držíme v klidovém stavu HIGH
+    HAL_Delay(1000); // Senzor potřebuje po zapnutí napájení cca 1 vteřinu na stabilizaci
     printf("KY_015 inicialized\n");
 }
 
-void KY_015_DeInit(void)
-{
-    HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin,
-                      0); // Power off the sensor
-}
+/**
+ * @brief Odpojení napájení senzoru (užitečné pro bateriové aplikace před uspáním).
+ */
+void KY_015_DeInit(void) { HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 0); }
 
+/**
+ * @brief Vyslání "Start" signálu ze strany mikrokontroléru.
+ * @note  Podle datasheetu DHT11/KY-015 musí MCU stáhnout linku do LOW
+ * na minimálně 18 ms, aby senzor detekoval požadavek o data.
+ */
 void KY_015_RequestData(void)
 {
     printf("KY_015 want data\n");
+    HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 0); // Stáhnout linku dolů (LOW)
+    Wait_us(18000);                                               // Zadržet v LOW na 18 ms (Startovací pulz)
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin,
-                      0); // Pull DATA pin low
-    Wait_us(18000);       // Hold for at least 18ms
-    // HAL_Delay(18);
-    HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 1); // DATA pin high
-                                                                  // Wait_us(40); // Wait for 20-40us
+                      1); // Uvolnit linku zpět do HIGH (přechod do režimu čtení)
 }
 
+/**
+ * @brief Vyčtení 40 bitů (5 bajtů) odpovědi přímo ze senzoru.
+ * @param data Ukazatel na pole o velikosti 5 bajtů, kam se uloží výsledek.
+ */
 void KY_015_ReadData(uint8_t *data)
 {
     uint8_t i, j;
     uint16_t start_tick;
     uint16_t pulse_length;
 
-    // Vymazat buffer
+    // Bezpečnostní vymazání bufferu před novým čtením
     for (i = 0; i < 5; i++)
         data[i] = 0;
 
-    // 1. Čekáme na odezvu (LOW)
+    // --- FÁZE POTVRZENÍ (ACK) OD SENZORU ---
     uint32_t timeout = 10000;
+
+    // 1. Čekáme, až senzor stáhne linku do LOW (potvrzení příjmu požadavku)
     while (HAL_GPIO_ReadPin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin) == 1)
     {
         if (--timeout == 0)
-            return;
+            return; // Ochrana proti zaseknutí (zabrání zamrznutí programu, pokud senzor chybí)
     }
 
-    // 2. Čekáme, dokud je LOW (80us presence)
+    // 2. Senzor drží linku LOW po dobu 80us. Čekáme, až ji pustí.
     timeout = 10000;
     while (HAL_GPIO_ReadPin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin) == 0)
     {
@@ -64,7 +77,7 @@ void KY_015_ReadData(uint8_t *data)
             return;
     }
 
-    // 3. Čekáme, dokud je HIGH (80us presence)
+    // 3. Senzor drží linku HIGH po dobu 80us (příprava na odeslání dat). Čekáme na konec.
     timeout = 10000;
     while (HAL_GPIO_ReadPin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin) == 1)
     {
@@ -72,12 +85,12 @@ void KY_015_ReadData(uint8_t *data)
             return;
     }
 
-    // 4. Čteme 40 bitů
-    for (i = 0; i < 5; i++)
+    // --- FÁZE ČTENÍ SAMOTNÝCH DAT (40 bitů) ---
+    for (i = 0; i < 5; i++) // Smyčka pro 5 bajtů
     {
-        for (j = 0; j < 8; j++)
+        for (j = 0; j < 8; j++) // Smyčka pro 8 bitů v každém bajtu
         {
-            // a) Čekáme na konec úvodního LOW (start bitu)
+            // a) Každý bit začíná 50us LOW signálem. Čekáme na jeho konec (přechod do HIGH).
             timeout = 10000;
             while (HAL_GPIO_ReadPin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin) == 0)
             {
@@ -85,10 +98,10 @@ void KY_015_ReadData(uint8_t *data)
                     return;
             }
 
-            // b) Měříme délku HIGH pulzu pomocí LPTIM2
+            // b) Začíná datový HIGH pulz. Zaznamenáme si aktuální čas.
             start_tick = LPTIM2->CNT;
 
-            // Čekáme, dokud neskončí HIGH
+            // Čekáme, dokud HIGH pulz neskončí
             timeout = 10000;
             while (HAL_GPIO_ReadPin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin) == 1)
             {
@@ -96,26 +109,29 @@ void KY_015_ReadData(uint8_t *data)
                     return;
             }
 
-            // Spočítáme délku pulzu
+            // Spočítáme reálnou délku trvání HIGH pulzu
             pulse_length = (uint16_t)(LPTIM2->CNT - start_tick);
 
-            // c) Rozhodnutí:
-            // 1 tick timeru při 1MHz = 1 us.
-            // Logická 0: 26-28us -> cca 26 - 28 ticků
-            // Logická 1: 70us    -> cca 70 ticků
-            // Práh dáme doprostřed: 50us -> cca 50 ticků
-
+            // c) Rozhodnutí o hodnotě bitu:
+            // Krátký pulz (cca 26-28 us)  = logická 0
+            // Dlouhý pulz (cca 70 us)     = logická 1
+            // Pokud je pulz delší než 50 us (hraniční hodnota), zapsat logickou 1.
             if (pulse_length > 50)
             {
+                // Bitový posun: (1 << (7 - j)) zapíše jedničku na správnou pozici v bajtu zleva doprava
                 data[i] |= (1 << (7 - j));
             }
         }
     }
 }
 
+/**
+ * @brief Hlavní aplikační funkce. Získá data, ověří je, vypočítá hodnoty a vypíše na LCD.
+ */
 void KY_015_GetData(void)
 {
-    BSP_LED_On(LED2);
+    BSP_LED_On(LED2); // Vizuální indikace probíhajícího měření
+
     uint8_t data[5] = {0};
     float humidity = 0.0;
     float temperature = 0.0;
@@ -123,58 +139,74 @@ void KY_015_GetData(void)
     char lcd_buffer[19];
 
     // --- KRITICKÁ SEKCE ZAČÁTEK ---
-    __disable_irq(); // Vypneme všechna přerušení
+    // Časování sběrnice u DHT11 je extrémně citlivé na mikrosekundy.
+    // Pokud by v tuto chvíli přišlo přerušení (např. od SysTicku nebo UARTu),
+    // čtení by se zpozdilo a načetli bychom nesmyslná data. Proto přerušení vypínáme.
+    __disable_irq();
 
     KY_015_RequestData();
     KY_015_ReadData(data);
 
-    __enable_irq(); // Zapneme přerušení zpět
+    __enable_irq(); // Okamžitě zapneme přerušení zpět, aby fungoval zbytek systému
     // --- KRITICKÁ SEKCE KONEC ---
 
-    // Verify checksum
-    // DHT11 checksum je součet prvních 4 bajtů (posledních 8 bitů součtu)
+    // Ověření platnosti dat (Checksum)
+    // Pátý bajt (data[4]) musí být přesným součtem prvních čtyř bajtů.
+    // '& 0xFF' ořízne výsledek pouze na spodních 8 bitů (pro případ přetečení).
     if (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF))
     {
-        // Pro DHT11 je formát obvykle:
-        // data[0] = Vlhkost celá část
-        // data[1] = Vlhkost desetinná (u DHT11 často 0)
-        // data[2] = Teplota celá část
-        // data[3] = Teplota desetinná (u DHT11 často 0)
+        // Převod surových dat na fyzikální veličiny podle specifikace DHT11
         humidity = data[0] + data[1] * 0.1;
         temperature = data[2] + data[3] * 0.1;
-        dew_point = temperature - ((100 - humidity) / 5.0); // Jednoduchý odhad rosného bodu
+
+        // Zjednodušený empirický výpočet rosného bodu
+        dew_point = temperature - ((100 - humidity) / 5.0);
     }
     else
     {
         printf("Chyba checksumu! Data: %02X %02X %02X %02X | CRC: %02X\n", data[0], data[1], data[2], data[3], data[4]);
-        return; // Nepokračujeme dál
+        return; // Zastavení funkce - nebudeme na displej vypisovat nesmysly
     }
 
+    // --- VÝPIS NA DISPLEJ A DO KONZOLE ---
     LCD_Cursor(0, 0);
     LCD_Display(&hi2c3, "SP1EL semestralka");
 
+    // Výpis teploty
     printf("Teplota: %.2f °C\n", temperature);
+    // Využíváme speciální znak '`' (ASCII 96), který máme ve fontu displeje překreslený jako znak stupně
     snprintf(lcd_buffer, sizeof(lcd_buffer), "Teplota: %.2f `C", temperature);
     LCD_Cursor(1, 0);
     LCD_Display(&hi2c3, lcd_buffer);
 
+    // Výpis vlhkosti
     printf("Vlhkost: %.2f %%\n", humidity);
     snprintf(lcd_buffer, sizeof(lcd_buffer), "Vlhkost: %.2f %%", humidity);
     LCD_Cursor(2, 0);
     LCD_Display(&hi2c3, lcd_buffer);
 
+    // Výpis rosného bodu
     printf("Rosný bod: %.2f °C\n", dew_point);
     snprintf(lcd_buffer, sizeof(lcd_buffer), "Rosny bod:%.2f `C", dew_point);
     LCD_Cursor(3, 0);
     LCD_Display(&hi2c3, lcd_buffer);
+
     printf("--------------------------------------------\n");
-    BSP_LED_Off(LED2);
+    BSP_LED_Off(LED2); // Konec měření, zhasnout LED
 }
 
+/**
+ * @brief Uspí procesor do hlubokého režimu STOP2 pro extrémní úsporu baterie.
+ */
 void enter_STOP2_mode(void)
 {
-    HAL_SuspendTick(); // Zastavíme SysTick, aby nás neprobudil
+    HAL_SuspendTick(); // Vypne hlavní časovač (SysTick), jinak by nás probudil za 1 milisekundu
+
+    // Samotný příkaz k uspání. Jádro se zde zastaví a čeká na přerušení (např. od LPTIM1).
     HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
-    SystemClock_Config(); // Obnovíme systémový hodinový zdroj po probuzení
-    HAL_ResumeTick();     // Obnovíme SysTick po probuzení
+
+    // --- KÓD POKRAČUJE ZDE AŽ PO PROBUZENÍ ---
+
+    SystemClock_Config(); // Ve STOP2 se vypínají hlavní hodiny (PLL), musíme je znovu nahodit
+    HAL_ResumeTick();     // Znovu zapne SysTick, aby fungovaly funkce jako HAL_Delay()
 }
