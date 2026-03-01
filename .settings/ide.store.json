@@ -1,0 +1,7 @@
+{
+  "board": "P-NUCLEO-WB55-NUCLEO",
+  "device": "STM32WB55RGV6",
+  "core": "Cortex-M4",
+  "order": 0,
+  "toolchain": "GCC"
+}
