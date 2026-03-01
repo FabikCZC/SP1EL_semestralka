@@ -66,6 +66,12 @@ void Error_Handler(void);
 #define RCC_OSC32_IN_GPIO_Port GPIOC
 #define RCC_OSC32_OUT_Pin GPIO_PIN_15
 #define RCC_OSC32_OUT_GPIO_Port GPIOC
+#define LCD_SCL_Pin GPIO_PIN_0
+#define LCD_SCL_GPIO_Port GPIOC
+#define LCD_SDA_Pin GPIO_PIN_1
+#define LCD_SDA_GPIO_Port GPIOC
+#define LCD_VDD_Pin GPIO_PIN_1
+#define LCD_VDD_GPIO_Port GPIOA
 #define KY_015_VDD_Pin GPIO_PIN_5
 #define KY_015_VDD_GPIO_Port GPIOA
 #define KY_015_DATA_Pin GPIO_PIN_6

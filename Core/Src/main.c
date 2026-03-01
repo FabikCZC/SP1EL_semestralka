@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "KY_015.h"
+#include "lcd128_32.h"
 
 /* USER CODE END Includes */
 
@@ -43,6 +44,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 COM_InitTypeDef BspCOMInit;
+I2C_HandleTypeDef hi2c3;
+
 LPTIM_HandleTypeDef hlptim1;
 
 /* USER CODE BEGIN PV */
@@ -54,6 +57,7 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_LPTIM1_Init(void);
+static void MX_I2C3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -96,8 +100,16 @@ int main(void) {
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_LPTIM1_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
   HAL_LPTIM_Counter_Start(&hlptim1, 0xFFFF);
+  LCD_Init(&hi2c3);
+
+  LCD_Clear(&hi2c3);
+  LCD_Cursor(0, 0);
+  LCD_Display(&hi2c3, "Test displeje STM32");
+  LCD_Cursor(1, 0); // Druhý řádek
+  LCD_DisplayNum(&hi2c3, 2026);
   /* USER CODE END 2 */
 
   /* Initialize leds */
@@ -202,6 +214,49 @@ void PeriphCommonClock_Config(void) {
 }
 
 /**
+ * @brief I2C3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_I2C3_Init(void) {
+
+  /* USER CODE BEGIN I2C3_Init 0 */
+
+  /* USER CODE END I2C3_Init 0 */
+
+  /* USER CODE BEGIN I2C3_Init 1 */
+
+  /* USER CODE END I2C3_Init 1 */
+  hi2c3.Instance = I2C3;
+  hi2c3.Init.Timing = 0x00B07CB4;
+  hi2c3.Init.OwnAddress1 = 0;
+  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c3.Init.OwnAddress2 = 0;
+  hi2c3.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK) {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+   */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE) != HAL_OK) {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+   */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C3_Init 2 */
+
+  /* USER CODE END I2C3_Init 2 */
+}
+
+/**
  * @brief LPTIM1 Initialization Function
  * @param None
  * @retval None
@@ -249,14 +304,15 @@ static void MX_GPIO_Init(void) {
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, KY_015_VDD_Pin | KY_015_DATA_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LCD_VDD_Pin | KY_015_VDD_Pin | KY_015_DATA_Pin,
+                    GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : KY_015_VDD_Pin */
-  GPIO_InitStruct.Pin = KY_015_VDD_Pin;
+  /*Configure GPIO pins : LCD_VDD_Pin KY_015_VDD_Pin */
+  GPIO_InitStruct.Pin = LCD_VDD_Pin | KY_015_VDD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(KY_015_VDD_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : KY_015_DATA_Pin */
   GPIO_InitStruct.Pin = KY_015_DATA_Pin;
