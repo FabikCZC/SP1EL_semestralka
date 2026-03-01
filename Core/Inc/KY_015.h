@@ -4,7 +4,7 @@
 
 // extern TIM_HandleTypeDef htim16;
 extern I2C_HandleTypeDef hi2c3;
-extern _Bool DHT11_read;
+extern void SystemClock_Config(void);
 
 // uint32_t LPTIM1_period = 30000; // 30ms period for LPTIM1
 
@@ -14,3 +14,4 @@ void KY_015_DeInit(void);
 void KY_015_RequestData(void);
 void KY_015_ReadData(uint8_t *data);
 void KY_015_GetData(void);
+void enter_STOP2_mode(void);

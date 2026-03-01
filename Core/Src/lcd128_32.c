@@ -107,372 +107,383 @@ static const uint8_t font_7x8[95][7] = {
 };
 
 // Interní pomocné funkce pro zápis přes I2C HAL
-static void WriteByte_command(I2C_HandleTypeDef *hi2c, uint8_t cmd) {
-  // MemAddress 0x00 = Co=0, A0=0 (příkaz)
-  HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, &cmd, 1,
-                    HAL_MAX_DELAY);
+static void WriteByte_command(I2C_HandleTypeDef *hi2c, uint8_t cmd)
+{
+    // MemAddress 0x00 = Co=0, A0=0 (příkaz)
+    HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, &cmd, 1, HAL_MAX_DELAY);
 }
 
-static void WriteByte_dat(I2C_HandleTypeDef *hi2c, uint8_t dat) {
-  // MemAddress 0x40 = Co=0, A0=1 (data)
-  HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x40, I2C_MEMADD_SIZE_8BIT, &dat, 1,
-                    HAL_MAX_DELAY);
+static void WriteByte_dat(I2C_HandleTypeDef *hi2c, uint8_t dat)
+{
+    // MemAddress 0x40 = Co=0, A0=1 (data)
+    HAL_I2C_Mem_Write(hi2c, LCD_I2C_ADDR, 0x40, I2C_MEMADD_SIZE_8BIT, &dat, 1, HAL_MAX_DELAY);
 }
 
-static void WriteFont(I2C_HandleTypeDef *hi2c, int num) {
-  for (int i = 0; i < 7; i++) {
-    WriteByte_dat(hi2c, font_7x8[num][i]);
-  }
+static void WriteFont(I2C_HandleTypeDef *hi2c, int num)
+{
+    for (int i = 0; i < 7; i++)
+    {
+        WriteByte_dat(hi2c, font_7x8[num][i]);
+    }
 }
 
 // Veřejné API funkce
 
-void LCD_Clear(I2C_HandleTypeDef *hi2c) {
-  for (int x = 0; x < 4; x++) {
-    WriteByte_command(hi2c, 0xb0 + x); // y page
-    WriteByte_command(hi2c, 0x10);     // x col hi
-    WriteByte_command(hi2c, 0x00);     // x col lo
-    for (int i = 0; i < 128; i++) {
-      WriteByte_dat(hi2c, 0x00);
+void LCD_Clear(I2C_HandleTypeDef *hi2c)
+{
+    for (int x = 0; x < 4; x++)
+    {
+        WriteByte_command(hi2c, 0xb0 + x); // y page
+        WriteByte_command(hi2c, 0x10);     // x col hi
+        WriteByte_command(hi2c, 0x00);     // x col lo
+        for (int i = 0; i < 128; i++)
+        {
+            WriteByte_dat(hi2c, 0x00);
+        }
     }
-  }
 }
 
-void LCD_Init(I2C_HandleTypeDef *hi2c) {
-  HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_SET);
-  HAL_Delay(10);
-  WriteByte_command(hi2c, 0xe2);
-  HAL_Delay(10);
-  WriteByte_command(hi2c, 0xa3);
-  WriteByte_command(hi2c, 0xa0);
-  WriteByte_command(hi2c, 0xc8);
-  WriteByte_command(hi2c, 0x22);
-  WriteByte_command(hi2c, 0x81);
-  WriteByte_command(hi2c, 0x30);
-  WriteByte_command(hi2c, 0x2c);
-  WriteByte_command(hi2c, 0x2e);
-  WriteByte_command(hi2c, 0x2f);
-  LCD_Clear(hi2c);
-  WriteByte_command(hi2c, 0xff);
-  WriteByte_command(hi2c, 0x72);
-  WriteByte_command(hi2c, 0xfe);
-  WriteByte_command(hi2c, 0xd6);
-  WriteByte_command(hi2c, 0x90);
-  WriteByte_command(hi2c, 0x9d);
-  WriteByte_command(hi2c, 0xaf);
-  WriteByte_command(hi2c, 0x40);
+void LCD_Init(I2C_HandleTypeDef *hi2c)
+{
+    HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_SET);
+    HAL_Delay(10);
+    WriteByte_command(hi2c, 0xe2);
+    HAL_Delay(10);
+    WriteByte_command(hi2c, 0xa3);
+    WriteByte_command(hi2c, 0xa0);
+    WriteByte_command(hi2c, 0xc8);
+    WriteByte_command(hi2c, 0x22);
+    WriteByte_command(hi2c, 0x81);
+    WriteByte_command(hi2c, 0x30);
+    WriteByte_command(hi2c, 0x2c);
+    WriteByte_command(hi2c, 0x2e);
+    WriteByte_command(hi2c, 0x2f);
+    LCD_Clear(hi2c);
+    WriteByte_command(hi2c, 0xff);
+    WriteByte_command(hi2c, 0x72);
+    WriteByte_command(hi2c, 0xfe);
+    WriteByte_command(hi2c, 0xd6);
+    WriteByte_command(hi2c, 0x90);
+    WriteByte_command(hi2c, 0x9d);
+    WriteByte_command(hi2c, 0xaf);
+    WriteByte_command(hi2c, 0x40);
 }
 
-void LCD_Cursor(uint8_t y, uint8_t x) {
-  if (x > 17)
-    x = 17;
-  if (y > 3)
-    y = 3;
-  lcd_cursor[0] = y;
-  lcd_cursor[1] = x;
+void LCD_Cursor(uint8_t y, uint8_t x)
+{
+    if (x > 17)
+        x = 17;
+    if (y > 3)
+        y = 3;
+    lcd_cursor[0] = y;
+    lcd_cursor[1] = x;
 }
 
-void LCD_Display(I2C_HandleTypeDef *hi2c, const char *str) {
-  int len = strlen(str);
-  WriteByte_command(hi2c, 0xb0 + lcd_cursor[0]);
-  WriteByte_command(hi2c, 0x10 + (lcd_cursor[1] * 7 / 16));
-  WriteByte_command(hi2c, 0x00 + (lcd_cursor[1] * 7 % 16));
+void LCD_Display(I2C_HandleTypeDef *hi2c, const char *str)
+{
+    int len = strlen(str);
+    WriteByte_command(hi2c, 0xb0 + lcd_cursor[0]);
+    WriteByte_command(hi2c, 0x10 + (lcd_cursor[1] * 7 / 16));
+    WriteByte_command(hi2c, 0x00 + (lcd_cursor[1] * 7 % 16));
 
-  for (int num = 0; num < len; num++) {
-    switch (str[num]) {
-    case '0':
-      WriteFont(hi2c, 0);
-      break;
-    case '1':
-      WriteFont(hi2c, 1);
-      break;
-    case '2':
-      WriteFont(hi2c, 2);
-      break;
-    case '3':
-      WriteFont(hi2c, 3);
-      break;
-    case '4':
-      WriteFont(hi2c, 4);
-      break;
-    case '5':
-      WriteFont(hi2c, 5);
-      break;
-    case '6':
-      WriteFont(hi2c, 6);
-      break;
-    case '7':
-      WriteFont(hi2c, 7);
-      break;
-    case '8':
-      WriteFont(hi2c, 8);
-      break;
-    case '9':
-      WriteFont(hi2c, 9);
-      break;
-    case 'a':
-      WriteFont(hi2c, 10);
-      break;
-    case 'b':
-      WriteFont(hi2c, 11);
-      break;
-    case 'c':
-      WriteFont(hi2c, 12);
-      break;
-    case 'd':
-      WriteFont(hi2c, 13);
-      break;
-    case 'e':
-      WriteFont(hi2c, 14);
-      break;
-    case 'f':
-      WriteFont(hi2c, 15);
-      break;
-    case 'g':
-      WriteFont(hi2c, 16);
-      break;
-    case 'h':
-      WriteFont(hi2c, 17);
-      break;
-    case 'i':
-      WriteFont(hi2c, 18);
-      break;
-    case 'j':
-      WriteFont(hi2c, 19);
-      break;
-    case 'k':
-      WriteFont(hi2c, 20);
-      break;
-    case 'l':
-      WriteFont(hi2c, 21);
-      break;
-    case 'm':
-      WriteFont(hi2c, 22);
-      break;
-    case 'n':
-      WriteFont(hi2c, 23);
-      break;
-    case 'o':
-      WriteFont(hi2c, 24);
-      break;
-    case 'p':
-      WriteFont(hi2c, 25);
-      break;
-    case 'q':
-      WriteFont(hi2c, 26);
-      break;
-    case 'r':
-      WriteFont(hi2c, 27);
-      break;
-    case 's':
-      WriteFont(hi2c, 28);
-      break;
-    case 't':
-      WriteFont(hi2c, 29);
-      break;
-    case 'u':
-      WriteFont(hi2c, 30);
-      break;
-    case 'v':
-      WriteFont(hi2c, 31);
-      break;
-    case 'w':
-      WriteFont(hi2c, 32);
-      break;
-    case 'x':
-      WriteFont(hi2c, 33);
-      break;
-    case 'y':
-      WriteFont(hi2c, 34);
-      break;
-    case 'z':
-      WriteFont(hi2c, 35);
-      break;
-    case 'A':
-      WriteFont(hi2c, 36);
-      break;
-    case 'B':
-      WriteFont(hi2c, 37);
-      break;
-    case 'C':
-      WriteFont(hi2c, 38);
-      break;
-    case 'D':
-      WriteFont(hi2c, 39);
-      break;
-    case 'E':
-      WriteFont(hi2c, 40);
-      break;
-    case 'F':
-      WriteFont(hi2c, 41);
-      break;
-    case 'G':
-      WriteFont(hi2c, 42);
-      break;
-    case 'H':
-      WriteFont(hi2c, 43);
-      break;
-    case 'I':
-      WriteFont(hi2c, 44);
-      break;
-    case 'J':
-      WriteFont(hi2c, 45);
-      break;
-    case 'K':
-      WriteFont(hi2c, 46);
-      break;
-    case 'L':
-      WriteFont(hi2c, 47);
-      break;
-    case 'M':
-      WriteFont(hi2c, 48);
-      break;
-    case 'N':
-      WriteFont(hi2c, 49);
-      break;
-    case 'O':
-      WriteFont(hi2c, 50);
-      break;
-    case 'P':
-      WriteFont(hi2c, 51);
-      break;
-    case 'Q':
-      WriteFont(hi2c, 52);
-      break;
-    case 'R':
-      WriteFont(hi2c, 53);
-      break;
-    case 'S':
-      WriteFont(hi2c, 54);
-      break;
-    case 'T':
-      WriteFont(hi2c, 55);
-      break;
-    case 'U':
-      WriteFont(hi2c, 56);
-      break;
-    case 'V':
-      WriteFont(hi2c, 57);
-      break;
-    case 'W':
-      WriteFont(hi2c, 58);
-      break;
-    case 'X':
-      WriteFont(hi2c, 59);
-      break;
-    case 'Y':
-      WriteFont(hi2c, 60);
-      break;
-    case 'Z':
-      WriteFont(hi2c, 61);
-      break;
-    case '!':
-      WriteFont(hi2c, 62);
-      break;
-    case '"':
-      WriteFont(hi2c, 63);
-      break;
-    case '#':
-      WriteFont(hi2c, 64);
-      break;
-    case '$':
-      WriteFont(hi2c, 65);
-      break;
-    case '%':
-      WriteFont(hi2c, 66);
-      break;
-    case '&':
-      WriteFont(hi2c, 67);
-      break;
-    case '\'':
-      WriteFont(hi2c, 68);
-      break;
-    case '(':
-      WriteFont(hi2c, 69);
-      break;
-    case ')':
-      WriteFont(hi2c, 70);
-      break;
-    case '*':
-      WriteFont(hi2c, 71);
-      break;
-    case '+':
-      WriteFont(hi2c, 72);
-      break;
-    case ',':
-      WriteFont(hi2c, 73);
-      break;
-    case '-':
-      WriteFont(hi2c, 74);
-      break;
-    case '/':
-      WriteFont(hi2c, 75);
-      break;
-    case ':':
-      WriteFont(hi2c, 76);
-      break;
-    case ';':
-      WriteFont(hi2c, 77);
-      break;
-    case '<':
-      WriteFont(hi2c, 78);
-      break;
-    case '=':
-      WriteFont(hi2c, 79);
-      break;
-    case '>':
-      WriteFont(hi2c, 80);
-      break;
-    case '?':
-      WriteFont(hi2c, 81);
-      break;
-    case '@':
-      WriteFont(hi2c, 82);
-      break;
-    case '{':
-      WriteFont(hi2c, 83);
-      break;
-    case '|':
-      WriteFont(hi2c, 84);
-      break;
-    case '}':
-      WriteFont(hi2c, 85);
-      break;
-    case '~':
-      WriteFont(hi2c, 86);
-      break;
-    case ' ':
-      WriteFont(hi2c, 87);
-      break;
-    case '.':
-      WriteFont(hi2c, 88);
-      break;
-    case '^':
-      WriteFont(hi2c, 89);
-      break;
-    case '_':
-      WriteFont(hi2c, 90);
-      break;
-    case '`':
-      WriteFont(hi2c, 91);
-      break;
-    case '[':
-      WriteFont(hi2c, 92);
-      break;
-    case '\\':
-      WriteFont(hi2c, 93);
-      break;
-    case ']':
-      WriteFont(hi2c, 94);
-      break;
-    default:
-      break;
+    for (int num = 0; num < len; num++)
+    {
+        switch (str[num])
+        {
+        case '0':
+            WriteFont(hi2c, 0);
+            break;
+        case '1':
+            WriteFont(hi2c, 1);
+            break;
+        case '2':
+            WriteFont(hi2c, 2);
+            break;
+        case '3':
+            WriteFont(hi2c, 3);
+            break;
+        case '4':
+            WriteFont(hi2c, 4);
+            break;
+        case '5':
+            WriteFont(hi2c, 5);
+            break;
+        case '6':
+            WriteFont(hi2c, 6);
+            break;
+        case '7':
+            WriteFont(hi2c, 7);
+            break;
+        case '8':
+            WriteFont(hi2c, 8);
+            break;
+        case '9':
+            WriteFont(hi2c, 9);
+            break;
+        case 'a':
+            WriteFont(hi2c, 10);
+            break;
+        case 'b':
+            WriteFont(hi2c, 11);
+            break;
+        case 'c':
+            WriteFont(hi2c, 12);
+            break;
+        case 'd':
+            WriteFont(hi2c, 13);
+            break;
+        case 'e':
+            WriteFont(hi2c, 14);
+            break;
+        case 'f':
+            WriteFont(hi2c, 15);
+            break;
+        case 'g':
+            WriteFont(hi2c, 16);
+            break;
+        case 'h':
+            WriteFont(hi2c, 17);
+            break;
+        case 'i':
+            WriteFont(hi2c, 18);
+            break;
+        case 'j':
+            WriteFont(hi2c, 19);
+            break;
+        case 'k':
+            WriteFont(hi2c, 20);
+            break;
+        case 'l':
+            WriteFont(hi2c, 21);
+            break;
+        case 'm':
+            WriteFont(hi2c, 22);
+            break;
+        case 'n':
+            WriteFont(hi2c, 23);
+            break;
+        case 'o':
+            WriteFont(hi2c, 24);
+            break;
+        case 'p':
+            WriteFont(hi2c, 25);
+            break;
+        case 'q':
+            WriteFont(hi2c, 26);
+            break;
+        case 'r':
+            WriteFont(hi2c, 27);
+            break;
+        case 's':
+            WriteFont(hi2c, 28);
+            break;
+        case 't':
+            WriteFont(hi2c, 29);
+            break;
+        case 'u':
+            WriteFont(hi2c, 30);
+            break;
+        case 'v':
+            WriteFont(hi2c, 31);
+            break;
+        case 'w':
+            WriteFont(hi2c, 32);
+            break;
+        case 'x':
+            WriteFont(hi2c, 33);
+            break;
+        case 'y':
+            WriteFont(hi2c, 34);
+            break;
+        case 'z':
+            WriteFont(hi2c, 35);
+            break;
+        case 'A':
+            WriteFont(hi2c, 36);
+            break;
+        case 'B':
+            WriteFont(hi2c, 37);
+            break;
+        case 'C':
+            WriteFont(hi2c, 38);
+            break;
+        case 'D':
+            WriteFont(hi2c, 39);
+            break;
+        case 'E':
+            WriteFont(hi2c, 40);
+            break;
+        case 'F':
+            WriteFont(hi2c, 41);
+            break;
+        case 'G':
+            WriteFont(hi2c, 42);
+            break;
+        case 'H':
+            WriteFont(hi2c, 43);
+            break;
+        case 'I':
+            WriteFont(hi2c, 44);
+            break;
+        case 'J':
+            WriteFont(hi2c, 45);
+            break;
+        case 'K':
+            WriteFont(hi2c, 46);
+            break;
+        case 'L':
+            WriteFont(hi2c, 47);
+            break;
+        case 'M':
+            WriteFont(hi2c, 48);
+            break;
+        case 'N':
+            WriteFont(hi2c, 49);
+            break;
+        case 'O':
+            WriteFont(hi2c, 50);
+            break;
+        case 'P':
+            WriteFont(hi2c, 51);
+            break;
+        case 'Q':
+            WriteFont(hi2c, 52);
+            break;
+        case 'R':
+            WriteFont(hi2c, 53);
+            break;
+        case 'S':
+            WriteFont(hi2c, 54);
+            break;
+        case 'T':
+            WriteFont(hi2c, 55);
+            break;
+        case 'U':
+            WriteFont(hi2c, 56);
+            break;
+        case 'V':
+            WriteFont(hi2c, 57);
+            break;
+        case 'W':
+            WriteFont(hi2c, 58);
+            break;
+        case 'X':
+            WriteFont(hi2c, 59);
+            break;
+        case 'Y':
+            WriteFont(hi2c, 60);
+            break;
+        case 'Z':
+            WriteFont(hi2c, 61);
+            break;
+        case '!':
+            WriteFont(hi2c, 62);
+            break;
+        case '"':
+            WriteFont(hi2c, 63);
+            break;
+        case '#':
+            WriteFont(hi2c, 64);
+            break;
+        case '$':
+            WriteFont(hi2c, 65);
+            break;
+        case '%':
+            WriteFont(hi2c, 66);
+            break;
+        case '&':
+            WriteFont(hi2c, 67);
+            break;
+        case '\'':
+            WriteFont(hi2c, 68);
+            break;
+        case '(':
+            WriteFont(hi2c, 69);
+            break;
+        case ')':
+            WriteFont(hi2c, 70);
+            break;
+        case '*':
+            WriteFont(hi2c, 71);
+            break;
+        case '+':
+            WriteFont(hi2c, 72);
+            break;
+        case ',':
+            WriteFont(hi2c, 73);
+            break;
+        case '-':
+            WriteFont(hi2c, 74);
+            break;
+        case '/':
+            WriteFont(hi2c, 75);
+            break;
+        case ':':
+            WriteFont(hi2c, 76);
+            break;
+        case ';':
+            WriteFont(hi2c, 77);
+            break;
+        case '<':
+            WriteFont(hi2c, 78);
+            break;
+        case '=':
+            WriteFont(hi2c, 79);
+            break;
+        case '>':
+            WriteFont(hi2c, 80);
+            break;
+        case '?':
+            WriteFont(hi2c, 81);
+            break;
+        case '@':
+            WriteFont(hi2c, 82);
+            break;
+        case '{':
+            WriteFont(hi2c, 83);
+            break;
+        case '|':
+            WriteFont(hi2c, 84);
+            break;
+        case '}':
+            WriteFont(hi2c, 85);
+            break;
+        case '~':
+            WriteFont(hi2c, 86);
+            break;
+        case ' ':
+            WriteFont(hi2c, 87);
+            break;
+        case '.':
+            WriteFont(hi2c, 88);
+            break;
+        case '^':
+            WriteFont(hi2c, 89);
+            break;
+        case '_':
+            WriteFont(hi2c, 90);
+            break;
+        case '`':
+            WriteFont(hi2c, 91);
+            break;
+        case '[':
+            WriteFont(hi2c, 92);
+            break;
+        case '\\':
+            WriteFont(hi2c, 93);
+            break;
+        case ']':
+            WriteFont(hi2c, 94);
+            break;
+        default:
+            break;
+        }
     }
-  }
 }
 
-void LCD_DisplayNum(I2C_HandleTypeDef *hi2c, int num) {
-  char str[18];
-  snprintf(str, sizeof(str), "%d", num);
-  LCD_Display(hi2c, str);
+void LCD_DisplayNum(I2C_HandleTypeDef *hi2c, int num)
+{
+    char str[18];
+    snprintf(str, sizeof(str), "%d", num);
+    LCD_Display(hi2c, str);
 }

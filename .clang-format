@@ -1,0 +1,15 @@
+BasedOnStyle: LLVM
+# Zabrání příliš brzkému zalamování řádků (výchozí je 80, 120 nebo 140 je dnešní standard).
+# Pokud nastavíte 0, kód se nebude zalamovat nikdy.
+ColumnLimit: 120
+
+# Nastavení složených závorek "{}"
+# Hodnota 'Attach' - závorka zůstává na stejném řádku (např. if (x) { )
+# Hodnota 'Allman' - závorka skočí vždy na nový řádek (styl typický pro C# a Visual Studio)
+# Hodnota 'Linux' - funkce mají závorku na novém řádku, if/while na stejném
+BreakBeforeBraces: Allman
+
+# Další užitečná nastavení:
+IndentWidth: 4          # Odsazení na 4 mezery
+UseTab: Never           # Používat mezery místo tabulátorů
+PointerAlignment: Right # Zarovnání hvězdičky doprava (int *ptr místo int* ptr)
