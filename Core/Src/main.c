@@ -104,12 +104,7 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   HAL_LPTIM_Counter_Start(&hlptim1, 0xFFFF);
   LCD_Init(&hi2c3);
-
   LCD_Clear(&hi2c3);
-  LCD_Cursor(0, 0);
-  LCD_Display(&hi2c3, "Test displeje STM32");
-  LCD_Cursor(1, 0); // Druhý řádek
-  LCD_DisplayNum(&hi2c3, 2026);
   /* USER CODE END 2 */
 
   /* Initialize leds */

@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 // extern TIM_HandleTypeDef htim16;
+extern I2C_HandleTypeDef hi2c3;
 
 // uint32_t LPTIM1_period = 30000; // 30ms period for LPTIM1
 

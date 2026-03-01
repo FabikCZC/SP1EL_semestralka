@@ -1,4 +1,5 @@
 #include "KY_015.h"
+#include "lcd128_32.h"
 
 void Wait_us(uint16_t us) {
   uint16_t start = LPTIM1->CNT;
@@ -102,6 +103,7 @@ void KY_015_GetData(void) {
   float humidity = 0.0;
   float temperature = 0.0;
   float dew_point = 0.0;
+  char lcd_buffer[19];
 
   // --- KRITICKÁ SEKCE ZAČÁTEK ---
   __disable_irq(); // Vypneme všechna přerušení
@@ -130,8 +132,22 @@ void KY_015_GetData(void) {
     return; // Nepokračujeme dál
   }
 
+  LCD_Cursor(0, 0);
+  LCD_Display(&hi2c3, "SP1EL semestralka");
+
   printf("Teplota: %.2f °C\n", temperature);
+  snprintf(lcd_buffer, sizeof(lcd_buffer), "Teplota: %.2f `C", temperature);
+  LCD_Cursor(1, 0);
+  LCD_Display(&hi2c3, lcd_buffer);
+
   printf("Vlhkost: %.2f %%\n", humidity);
+  snprintf(lcd_buffer, sizeof(lcd_buffer), "Vlhkost: %.2f %%", humidity);
+  LCD_Cursor(2, 0);
+  LCD_Display(&hi2c3, lcd_buffer);
+
   printf("Rosný bod: %.2f °C\n", dew_point);
+  snprintf(lcd_buffer, sizeof(lcd_buffer), "Rosny bod:%.2f `C", dew_point);
+  LCD_Cursor(3, 0);
+  LCD_Display(&hi2c3, lcd_buffer);
   printf("--------------------------------------------\n");
 }
