@@ -1,0 +1,1 @@
+The goal of the project is to design and implement an application for the STM32WB55 microcontroller that will be able to operate in low power mode. The application will periodically wake up the microcontroller from Low Power mode, perform measurements via an external DHT11 sensor, and then display the data on a reflective LCD display or send it via a communication interface.
