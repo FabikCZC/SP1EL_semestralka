@@ -1,6 +1,8 @@
 #include "KY_015.h"
 #include "lcd128_32.h"
 #include "stm32wb55xx.h"
+#include "stm32wbxx_hal_gpio.h"
+#include "stm32wbxx_hal_i2c.h"
 #include "stm32wbxx_nucleo.h"
 
 /**
@@ -202,7 +204,16 @@ void KY_015_GetData(void)
  */
 void enter_STOP2_mode(void)
 {
-    KY_015_DeInit();   // Odpojení napájení senzoru, aby nespotřebovával energii během spánku
+    KY_015_DeInit(); // Odpojení napájení senzoru, aby nespotřebovával energii během spánku
+
+    /*LCD_DeInit(&hi2c3);     // Vypnutí displeje a jeho napájení, aby nespotřebovával energii během spánku
+    HAL_I2C_DeInit(&hi2c3); // De-inicializace I2C, aby nespotřebovávalo energii během spánku
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);*/
+
     HAL_SuspendTick(); // Vypne hlavní časovač (SysTick), jinak by nás probudil za 1 milisekundu
 
     // Samotný příkaz k uspání. Jádro se zde zastaví a čeká na přerušení (např. od LPTIM1).
@@ -213,4 +224,6 @@ void enter_STOP2_mode(void)
     SystemClock_Config(); // Ve STOP2 se vypínají hlavní hodiny (PLL), musíme je znovu nahodit
     HAL_ResumeTick();     // Znovu zapne SysTick, aby fungovaly funkce jako HAL_Delay()
     KY_015_Init();        // Znovu inicializujeme senzor, protože jsme odpojili jeho napájení
+
+    // LCD_Init(&hi2c3); // Znovu inicializujeme displej, protože jsme odpojili jeho napájení
 }

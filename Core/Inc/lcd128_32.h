@@ -32,6 +32,7 @@
 
 // Prototypy funkcí
 void LCD_Init(I2C_HandleTypeDef *hi2c);
+void LCD_DeInit(I2C_HandleTypeDef *hi2c);
 void LCD_Clear(I2C_HandleTypeDef *hi2c);
 void LCD_Cursor(uint8_t y, uint8_t x);
 void LCD_Display(I2C_HandleTypeDef *hi2c, const char *str);

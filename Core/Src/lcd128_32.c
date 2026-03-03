@@ -1,5 +1,6 @@
 #include "lcd128_32.h"
 #include "main.h"
+#include "stm32wb55xx.h"
 #include "stm32wbxx_hal_gpio.h"
 #include <stdio.h>
 #include <string.h>
@@ -207,6 +208,15 @@ void LCD_Init(I2C_HandleTypeDef *hi2c)
     WriteByte_command(hi2c, 0x9d);
     WriteByte_command(hi2c, 0xaf); // Hlavní příkaz: ZAPNOUT DISPLEJ (Display ON)
     WriteByte_command(hi2c, 0x40); // Nastavení startovní řádky RAM na 0
+}
+
+void LCD_DeInit(I2C_HandleTypeDef *hi2c)
+{
+    // 1. Vypnutí displeje
+    WriteByte_command(hi2c, 0xae); // Příkaz pro vypnutí displeje (Display OFF)
+
+    // 2. Hardwarové vypnutí napájení
+    HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_RESET);
 }
 
 /**
