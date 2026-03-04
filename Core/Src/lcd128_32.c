@@ -176,6 +176,13 @@ void LCD_Clear(I2C_HandleTypeDef *hi2c)
  */
 void LCD_Init(I2C_HandleTypeDef *hi2c)
 {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = LCD_VDD_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
     // 1. Hardwarové zapnutí napájení displeje
     HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_SET);
     HAL_Delay(10);
@@ -217,6 +224,16 @@ void LCD_DeInit(I2C_HandleTypeDef *hi2c)
 
     // 2. Hardwarové vypnutí napájení
     HAL_GPIO_WritePin(LCD_VDD_GPIO_Port, LCD_VDD_Pin, GPIO_PIN_RESET);
+
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /**

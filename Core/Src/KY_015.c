@@ -22,6 +22,18 @@ void Wait_us(uint16_t us)
  */
 void KY_015_Init(void)
 {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = KY_015_VDD_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = KY_015_DATA_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(KY_015_DATA_GPIO_Port, &GPIO_InitStruct);
+
     HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 1);   // Zapnutí fyzického napájení senzoru (VDD)
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 1); // Datový pin držíme v klidovém stavu HIGH
     HAL_Delay(1000); // Senzor potřebuje po zapnutí napájení cca 1 vteřinu na stabilizaci
@@ -34,6 +46,12 @@ void KY_015_DeInit(void)
 {
     HAL_GPIO_WritePin(KY_015_VDD_GPIO_Port, KY_015_VDD_Pin, 0);
     HAL_GPIO_WritePin(KY_015_DATA_GPIO_Port, KY_015_DATA_Pin, 0);
+
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_5 | GPIO_PIN_6;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /**
@@ -206,13 +224,8 @@ void enter_STOP2_mode(void)
 {
     KY_015_DeInit(); // Odpojení napájení senzoru, aby nespotřebovával energii během spánku
 
-    /*LCD_DeInit(&hi2c3);     // Vypnutí displeje a jeho napájení, aby nespotřebovával energii během spánku
-    HAL_I2C_DeInit(&hi2c3); // De-inicializace I2C, aby nespotřebovávalo energii během spánku
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);*/
+    // LCD_DeInit(&hi2c3);     // Vypnutí displeje a jeho napájení, aby nespotřebovával energii během spánku
+    // HAL_I2C_DeInit(&hi2c3); // De-inicializace I2C, aby nespotřebovávalo energii během spánku
 
     HAL_SuspendTick(); // Vypne hlavní časovač (SysTick), jinak by nás probudil za 1 milisekundu
 
@@ -225,5 +238,6 @@ void enter_STOP2_mode(void)
     HAL_ResumeTick();     // Znovu zapne SysTick, aby fungovaly funkce jako HAL_Delay()
     KY_015_Init();        // Znovu inicializujeme senzor, protože jsme odpojili jeho napájení
 
-    // LCD_Init(&hi2c3); // Znovu inicializujeme displej, protože jsme odpojili jeho napájení
+    // HAL_I2C_Init(&hi2c3); // Znovu inicializujeme I2C, protože jsme ho de-inicializovali před spánkem
+    // LCD_Init(&hi2c3);     // Znovu inicializujeme displej, protože jsme odpojili jeho napájení
 }
